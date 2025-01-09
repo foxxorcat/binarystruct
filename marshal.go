@@ -13,6 +13,14 @@ import (
 	"golang.org/x/text/encoding"
 )
 
+type Serializer interface {
+	Serialize(w io.Writer, order ByteOrder) (int, error)
+}
+
+var (
+	SerializerType = reflect.TypeOf((*Serializer)(nil)).Elem()
+)
+
 // Marshal encodes a go value into binary data and return it as []byte.
 func Marshal(govalue interface{}, order ByteOrder) (encoded []byte, err error) {
 	var ms Marshaller
@@ -89,6 +97,10 @@ func (ms *Marshaller) writeMain(w io.Writer, order ByteOrder, v reflect.Value, e
 		for i := 0; i < option.indirectCount; i++ {
 			v = v.Elem()
 		}
+	}
+
+	if option.serializer {
+		return ms.writeSerializer(w, order, v)
 	}
 
 	if option.isArray {
@@ -411,6 +423,14 @@ func (ms *Marshaller) writeScalar(w io.Writer, order ByteOrder, v reflect.Value,
 		return
 	}
 	return writeU64(w, order, u64, sz)
+}
+
+func (ms *Marshaller) writeSerializer(w io.Writer, order ByteOrder, v reflect.Value) (n int, err error) {
+	m, ok := v.Interface().(Serializer)
+	if !ok {
+		return 0, fmt.Errorf("Serializer: unexpected error occurred")
+	}
+	return m.Serialize(w, order)
 }
 
 // write bytes according to the byte order

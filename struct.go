@@ -22,7 +22,7 @@ var (
 	mTag = regexp.MustCompile(`^\s*(\[([^\]]*)\])?([^\s\(\)]*)(\(([^\)]+)\))?`)
 
 	// single entry of tag-value evaluation
-	mExpression = regexp.MustCompile(`\s*([\+\-])?\s*([^\s\+\-]+)`)
+	mExpression = regexp.MustCompile(`\s*([\+\-\*\/])?\s*([^\s\+\-\*\/]+)`)
 )
 
 // simple add-sub calculator, with struct field referencing
@@ -81,6 +81,10 @@ func evaluateTagValue(strc reflect.Value, stmt string) (value int, err error) {
 			sum = sum + i64
 		case "-":
 			sum = sum - i64
+		case "*":
+			sum = sum * i64
+		case "/":
+			sum = sum / i64
 		default:
 			err = fmt.Errorf("invalid operation <%s>", q.operation)
 			return
