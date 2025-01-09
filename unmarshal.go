@@ -24,6 +24,14 @@ var (
 	ErrUnknownLength = errors.New("unknown array, slice or string size")
 )
 
+type Deserializer interface {
+	Deserialize(r io.Reader, order ByteOrder) (int, error)
+}
+
+var (
+	DeserializerType = reflect.TypeOf((*Deserializer)(nil)).Elem()
+)
+
 // Unmarshal decodes binary images into a Go value. The Go value must be a writable type such as a slice, a pointer or an interface.
 func Unmarshal(input []byte, order ByteOrder, govalue interface{}) (n int, err error) {
 	var ms Marshaller
@@ -64,6 +72,10 @@ func (ms *Marshaller) readMain(r io.Reader, order ByteOrder, v reflect.Value, en
 		for i := 0; i < option.indirectCount; i++ {
 			v = v.Elem()
 		}
+	}
+
+	if option.deserializer {
+		return ms.readSerializer(r, order, v.Addr())
 	}
 
 	if option.isArray {
@@ -598,6 +610,14 @@ func (ms *Marshaller) readScalar(r io.Reader, order ByteOrder, v reflect.Value, 
 	}
 	err = dec(v, u64)
 	return
+}
+
+func (ms *Marshaller) readSerializer(r io.Reader, order ByteOrder, v reflect.Value) (n int, err error) {
+	m, ok := v.Interface().(Deserializer)
+	if !ok {
+		return 0, fmt.Errorf("Serializer: unexpected error occurred")
+	}
+	return m.Deserialize(r, order)
 }
 
 // follow pointers to the end

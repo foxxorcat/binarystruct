@@ -130,6 +130,9 @@ type typeOption struct {
 	arrayLen      int    // length of the tagged array
 	bufLen        int    // tagged field is a string or a padding of length bufLen: `binary:"STRINGTYPE(buflen)"`
 	encoding      string // string encoding of the field: `binary:"string,encoding=ENC"`
+
+	deserializer bool
+	serializer   bool
 }
 
 func getITypeFromRType(rt reflect.Type) (it eType) {
@@ -205,6 +208,14 @@ func getNaturalType(v reflect.Value) (t eType, option typeOption) {
 			typ = v.Type()
 			kind = typ.Kind()
 		}
+	}
+
+	if typ.Implements(SerializerType) {
+		option.serializer = true
+	}
+
+	if reflect.PtrTo(typ).Implements(DeserializerType) {
+		option.deserializer = true
 	}
 
 	t = getITypeFromRType(typ)
